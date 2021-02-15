@@ -1,0 +1,23 @@
+{
+  "name": "learn-git",
+  "version": "0.1.0",
+  "description": "",
+  "scripts": {
+    "build": "spago build",
+    "start": "npm run build && parcel index.html",
+    "install": "spago install"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@parcel/optimizer-htmlnano": "^2.0.0-nightly.598",
+    "@parcel/packager-html": "^2.0.0-nightly.598",
+    "@parcel/transformer-html": "^2.0.0-nightly.598",
+    "@parcel/transformer-posthtml": "^2.0.0-nightly.598",
+    "parcel": "2.0.0-nightly.596",
+    "purescript": "0.13.8",
+    "react": "16.14.0",
+    "react-dom": "16.14.0",
+    "spago": "0.19.0"
+  }
+}
