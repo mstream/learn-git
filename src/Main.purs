@@ -24,16 +24,28 @@ type State
 
 app :: forall a. State -> Widget HTML a
 app state = do
-  action <- div [ className "container mx-auto px-4" ] [ cli state ]
+  action <- div [ className "container h-screen mx-auto px-4" ] [ layout state ]
   case action of
     CliInputUpdated val -> app $ state { cliInput = val }
     CliInputSubmitted -> app $ state { cliInput = "", cliHistory = state.cliInput : state.cliHistory }
 
-cli :: forall r. { cliInput :: String, cliHistory :: List String | r } -> Widget HTML Action
-cli state = div [ className "flex flex-col" ] [ cliHistory state, cliInput state ]
+layout :: State -> Widget HTML Action
+layout state =
+  div
+    [ className "grid grid-cols-12 justify-items-stretch w-full h-full" ]
+    [ div
+        [ className "col-span-3 row-span-5 justify-content-center" ]
+        [ cliHistory state ]
+    , div
+        [ className "col-span-9 row-span 5" ]
+        []
+    , div
+        [ className "col-span-12" ]
+        [ cliInput state ]
+    ]
 
 cliHistory :: forall a r. { cliHistory :: List String | r } -> Widget HTML a
-cliHistory state = div [ className "flex flex-col-reverse" ] $ fromFoldable $ state.cliHistory <#> cliHistoryEntry
+cliHistory state = div [ className "flex flex-col-reverse w-full h-full" ] $ fromFoldable $ state.cliHistory <#> cliHistoryEntry
 
 cliHistoryEntry :: forall a. String -> Widget HTML a
 cliHistoryEntry val = div' [ text val ]
@@ -45,4 +57,5 @@ cliInput state =
     , value state.cliInput
     , (CliInputUpdated <<< unsafeTargetValue) <$> onChange
     , CliInputSubmitted <$ onKeyEnter
+    , className "w-full h-6"
     ]
