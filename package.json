@@ -9,15 +9,28 @@
   },
   "author": "",
   "license": "ISC",
+  "postcss": {
+    "plugins": {
+      "autoprefixer": {},
+      "tailwindcss": {}
+    }
+  },
   "devDependencies": {
-    "@parcel/optimizer-htmlnano": "^2.0.0-nightly.598",
-    "@parcel/packager-html": "^2.0.0-nightly.598",
-    "@parcel/transformer-html": "^2.0.0-nightly.598",
-    "@parcel/transformer-posthtml": "^2.0.0-nightly.598",
+    "@parcel/optimizer-cssnano": "2.0.0-nightly.598",
+    "@parcel/optimizer-htmlnano": "2.0.0-nightly.598",
+    "@parcel/packager-css": "2.0.0-nightly.598",
+    "@parcel/packager-html": "2.0.0-nightly.598",
+    "@parcel/transformer-css": "2.0.0-nightly.598",
+    "@parcel/transformer-html": "2.0.0-nightly.598",
+    "@parcel/transformer-postcss": "2.0.0-nightly.598",
+    "@parcel/transformer-posthtml": "2.0.0-nightly.598",
+    "autoprefixer": "10.2.4",
     "parcel": "2.0.0-nightly.596",
+    "postcss": "8.2.6",
     "purescript": "0.13.8",
     "react": "16.14.0",
     "react-dom": "16.14.0",
-    "spago": "0.19.0"
+    "spago": "0.19.0",
+    "tailwindcss": "2.0.2"
   }
 }
