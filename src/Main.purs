@@ -1,61 +1,100 @@
 module Main (main) where
 
 import Prelude
-import Concur.Core (Widget)
-import Concur.React (HTML)
-import Concur.React.DOM (div, div', input, text)
-import Concur.React.Props (_type, className, onChange, onKeyEnter, unsafeTargetValue, value)
-import Concur.React.Run (runWidgetInDom)
-import Data.Array (fromFoldable)
-import Data.List (List(..), (:))
+import Api (AppM, runAppM)
+import Api.Fs (isDir, readDir, readFile, writeFile)
+import Core.Event (Event(..))
+import Core.FileSystem (FileContent, FileName, FileType(..), Path)
+import Core.Logger (LogEntry, LogLevel(..), logLevel)
+import Core.State (State, CliLogs)
+import Core.StringCodec (decodeFromString, encodeToString)
+import Data.Either (Either(..))
+import Data.Either.Nested (type (\/))
+import Data.List (List(..))
+import Data.Map (fromFoldable)
+import Data.Monoid (mempty)
+import Data.Traversable (traverse)
+import Data.Tuple.Nested ((/\))
+import Domain.App (handleEvent)
 import Effect (Effect)
+import Effect.Aff (Aff, attempt, message)
+import Effect.Aff.Class (liftAff)
+import Effect.Class (liftEffect)
+import Effect.Console (error, info, warn)
+import Infrastructure.Ui.Element as E
+import Infrastructure.Ui.Terminal (terminal)
 
 main :: Effect Unit
-main = runWidgetInDom "main" $ app { cliInput: "", cliHistory: Nil }
+main = E.runInDom "main" $ app initialState
 
-data Action
-  = CliInputUpdated String
-  | CliInputSubmitted
+initialState :: State
+initialState =
+  { cliHistory: Nil
+  , cliInput: ""
+  , cliLogs: mempty
+  }
 
-type State
-  = { cliHistory :: List String
-    , cliInput :: String
+app :: State -> E.Element State
+app state = do
+  event <- E.div [ E.className "container mx-auto px-4 h-screen py-4" ] [ page state ]
+  newState <- liftAff $ runApi $ handleEvent state event
+  app newState
+
+page :: forall r. { cliHistory :: List String, cliLogs :: CliLogs | r } -> E.Element Event
+page state =
+  E.div
+    [ E.className "grid grid-cols-12" ]
+    [ E.div
+        [ E.className "col-span-3" ]
+        [ CmdExecRequested <$> terminal { history: state.cliHistory, logs: state.cliLogs } ]
+    , E.div
+        [ E.className "col-span-9" ]
+        [ E.text "perspective" ]
+    ]
+
+runApi :: AppM ~> Aff
+runApi =
+  runAppM
+    { getFileContent: getFileContent
+    , getFileNames: getFileNames
+    , getFileType: getFileType
+    , log: log
+    , saveFileContent: saveFileContent
     }
 
-app :: forall a. State -> Widget HTML a
-app state = do
-  action <- div [ className "container h-screen mx-auto px-4" ] [ layout state ]
-  case action of
-    CliInputUpdated val -> app $ state { cliInput = val }
-    CliInputSubmitted -> app $ state { cliInput = "", cliHistory = state.cliInput : state.cliHistory }
+getFileContent :: Path -> Aff (String \/ FileContent)
+getFileContent path = do
+  result <- attempt $ readFile $ encodeToString path
+  pure case result of
+    Left error -> Left $ message error
+    Right s -> decodeFromString s
 
-layout :: State -> Widget HTML Action
-layout state =
-  div
-    [ className "grid grid-cols-12 justify-items-stretch w-full h-full" ]
-    [ div
-        [ className "col-span-3 row-span-5 justify-content-center" ]
-        [ cliHistory state ]
-    , div
-        [ className "col-span-9 row-span 5" ]
-        []
-    , div
-        [ className "col-span-12" ]
-        [ cliInput state ]
-    ]
+getFileNames :: Path -> Aff (String \/ Array FileName)
+getFileNames path = do
+  result <- attempt $ readDir $ encodeToString path
+  pure case result of
+    Left error -> Left $ message error
+    Right ss -> traverse decodeFromString ss
 
-cliHistory :: forall a r. { cliHistory :: List String | r } -> Widget HTML a
-cliHistory state = div [ className "flex flex-col-reverse w-full h-full" ] $ fromFoldable $ state.cliHistory <#> cliHistoryEntry
+getFileType :: Path -> Aff (String \/ FileType)
+getFileType path = do
+  result <- attempt $ isDir $ encodeToString path
+  pure case result of
+    Left error -> Left $ message error
+    Right b -> if b then Right Directory else Right RegularFile
 
-cliHistoryEntry :: forall a. String -> Widget HTML a
-cliHistoryEntry val = div' [ text val ]
+log :: LogEntry -> Aff Unit
+log entry = liftEffect $ logToConsole $ encodeToString entry
+  where
+  logToConsole :: String -> Effect Unit
+  logToConsole = case logLevel entry of
+    Error -> error
+    Info -> info
+    Warn -> warn
 
-cliInput :: forall r. { cliInput :: String | r } -> Widget HTML Action
-cliInput state =
-  input
-    [ _type "text"
-    , value state.cliInput
-    , (CliInputUpdated <<< unsafeTargetValue) <$> onChange
-    , CliInputSubmitted <$ onKeyEnter
-    , className "w-full h-6"
-    ]
+saveFileContent :: Path -> FileContent -> Aff (String \/ Unit)
+saveFileContent path content = do
+  result <- attempt $ writeFile (encodeToString path) (encodeToString content)
+  pure case result of
+    Left error -> Left $ message error
+    Right _ -> Right unit
