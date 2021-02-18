@@ -1,18 +1,20 @@
 module Infrastructure.Ui.Terminal (terminal) where
 
 import Prelude
+import Core.Cli (Cmd, commandArgs, commandName)
 import Core.Logger (LogEntry, LogLevel(..), logLevel)
 import Core.State (CliLogs)
 import Core.StringCodec (encodeToString)
 import Data.Array (fromFoldable)
 import Data.List (List)
+import Data.String (joinWith)
 import Infrastructure.Ui.Element as E
 
 data Event
   = InputSubmitted
   | InputUpdated String
 
-terminal :: forall r. { history :: List String, logs :: CliLogs | r } -> E.Element String
+terminal :: forall r. { history :: List Cmd, logs :: CliLogs | r } -> E.Element String
 terminal state =
   E.div
     [ E.className "grid grid-rows-6" ]
@@ -41,14 +43,18 @@ commandLine val = do
     InputSubmitted -> pure val
     InputUpdated newVal -> commandLine newVal
 
-history :: forall a r. { history :: List String | r } -> E.Element a
-history state = E.div [ E.className "flex flex-col-reverse w-full h-full" ] entries
+history :: forall a r. { history :: List Cmd | r } -> E.Element a
+history state = E.div [ E.className "flex flex-col-reverse justify-end w-full h-full" ] entries
   where
   entries :: Array (E.Element a)
   entries = fromFoldable $ state.history <#> historyEntry
 
-historyEntry :: forall a. String -> E.Element a
-historyEntry val = E.div' [ E.text val ]
+historyEntry :: forall a. Cmd -> E.Element a
+historyEntry cmd =
+  E.div [ E.className "flex flex-row py-1" ]
+    [ E.div [ E.className "pr-1 font-medium" ] [ E.text $ commandName cmd ]
+    , E.div [ E.className "flex flex-row italic" ] $ [ E.text $ joinWith " " $ commandArgs cmd ]
+    ]
 
 logsWindow :: forall a. CliLogs -> E.Element a
 logsWindow logs = E.ul' $ toElement <$> fromFoldable logs

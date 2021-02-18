@@ -1,16 +1,12 @@
 module Core.State (CliLogs, State) where
 
-import Prelude
-import Core.Logger (LogEntry(..), LogLevel(..))
-import Data.List (List(..))
-import Data.Map (Map, fromFoldable, update)
-import Data.Maybe (Maybe(..))
-import Data.Monoid (class Monoid, class Semigroup, mempty)
+import Core.Cli (Cmd)
+import Core.Logger (LogEntry)
+import Data.List (List)
 import Data.Set (Set)
-import Data.Tuple.Nested ((/\))
 
 type State
-  = { cliHistory :: List String
+  = { cliHistory :: List Cmd
     , cliInput :: String
     , cliLogs :: CliLogs
     }
