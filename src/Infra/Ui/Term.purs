@@ -1,20 +1,20 @@
-module Infrastructure.Ui.Terminal (terminal) where
+module Infra.Ui.Term (terminal) where
 
 import Prelude
 import Core.Cli (Cmd, commandArgs, commandName)
 import Core.Logger (LogEntry, LogLevel(..), logLevel)
-import Core.State (CliLogs)
 import Core.StringCodec (encodeToString)
 import Data.Array (fromFoldable)
 import Data.List (List)
+import Data.Set (Set)
 import Data.String (joinWith)
-import Infrastructure.Ui.Element as E
+import Infra.Ui.Element as E
 
 data Event
   = InputSubmitted
   | InputUpdated String
 
-terminal :: forall r. { history :: List Cmd, logs :: CliLogs | r } -> E.Element String
+terminal :: forall r. { history :: List Cmd, logs :: Set LogEntry | r } -> E.Element String
 terminal state =
   E.div
     [ E.className "grid grid-rows-6" ]
@@ -56,7 +56,7 @@ historyEntry cmd =
     , E.div [ E.className "flex flex-row italic" ] $ [ E.text $ joinWith " " $ commandArgs cmd ]
     ]
 
-logsWindow :: forall a. CliLogs -> E.Element a
+logsWindow :: forall a. Set LogEntry -> E.Element a
 logsWindow logs = E.ul' $ toElement <$> fromFoldable logs
   where
   toElement :: LogEntry -> E.Element a

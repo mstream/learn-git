@@ -3,6 +3,7 @@
 , dependencies =
   [ "aff-promise"
   , "concur-react"
+  , "motsunabe"
   , "quickcheck"
   , "spec"
   , "spec-quickcheck"

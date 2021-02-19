@@ -30,6 +30,11 @@ exports.mkReadFilePromise = (path) => () =>
     encoding
   }).then(reportValue("readFile")).catch(reportError("readFile"));
 
+exports.mkMkDirPromise = (path) => () => {
+  console.log(path)
+  return fs.mkdir(path).then(reportValue("mkDir")).catch(reportError("mkDir"));
+}
+
 exports.mkWriteFilePromise = (path) => (data) => () => {
   console.log(path)
   return fs.writeFile(path, data).then(reportValue("writeFile")).catch(reportError("writeFile"));

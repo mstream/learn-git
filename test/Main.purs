@@ -2,7 +2,7 @@ module Test.Main (main) where
 
 import Prelude
 import Core.Cli (Cmd)
-import Core.FileSystem (FileContent, FileName, Path)
+import Core.Fs (FileContent, FileName, Path)
 import Core.StringCodec (decodeFromString, encodeToString)
 import Data.Either (Either(..))
 import Data.Either.Nested (type (\/))
@@ -21,7 +21,8 @@ main =
           it "codes file name" $ recodeFileName "abc"
           it "codes path" $ recodePath "/abc/def"
           it "codes file content" $ recodeFileContent "content"
-          it "codes command" $ recodeCmd "edit /abc \"content\""
+          it "codes edit command" $ recodeCmd "edit /abc \"content\""
+          it "codes mkdir command" $ recodeCmd "mkdir /abc"
 
 recodeCmd :: String -> Aff Unit
 recodeCmd input =

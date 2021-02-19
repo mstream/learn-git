@@ -1,9 +1,11 @@
-module Domain.Capabilities
-  ( class GetFileContent
+module Domain.Caps
+  ( class CreateDirectory
+  , class GetFileContent
   , class GetFileNames
   , class GetFileType
   , class Log
   , class SaveFileContent
+  , createDirectory
   , getFileContent
   , getFileNames
   , getFileType
@@ -13,9 +15,13 @@ module Domain.Capabilities
 
 import Prelude
 import Core.Event (Event)
-import Core.FileSystem (FileContent, FileName, FileType, Path)
+import Core.Fs (FileContent, FileName, FileType, Path)
 import Core.Logger (LogEntry(..))
 import Data.Either.Nested (type (\/))
+
+class
+  (Monad m) <= CreateDirectory m where
+  createDirectory :: Path -> m (String \/ Unit)
 
 class
   (Monad m) <= GetFileContent m where

@@ -1,9 +1,11 @@
-module Core.FileSystem
-  ( FileContent
+module Core.Fs
+  ( File(..)
+  , FileContent
   , FileName
   , FileType(..)
   , Path
   , fileContentParser
+  , fromFileName
   , pathParser
   ) where
 
@@ -12,21 +14,53 @@ import Core.StringCodec (class StringCodec, decodeUsingParser, encodeToString)
 import Data.Array (fromFoldable)
 import Data.Array.NonEmpty (fromFoldable1)
 import Data.Either.Nested (type (\/))
+import Data.FoldableWithIndex (foldlWithIndex)
 import Data.List (List)
 import Data.List.NonEmpty (NonEmptyList)
-import Data.Map (Map)
+import Data.Map (Map, isEmpty)
 import Data.String (codePointFromChar, joinWith, singleton)
 import Data.String.CodeUnits (fromCharArray)
 import Data.String.NonEmpty (NonEmptyString, toString)
 import Data.String.NonEmpty.CodeUnits (fromNonEmptyCharArray)
+import Motsunabe (Doc(..), pretty)
 import Text.Parsing.StringParser (Parser)
-import Text.Parsing.StringParser.CodePoints (alphaNum, anyChar, char)
+import Text.Parsing.StringParser.CodePoints (alphaNum, char)
 import Text.Parsing.StringParser.CodeUnits (noneOf)
 import Text.Parsing.StringParser.Combinators (choice, many, many1, sepBy)
 
 data File
   = DirectoryOf (Map FileName File)
-  | RegularFileOf FileContent
+  | RegularFileContaining FileContent
+
+instance showFile :: Show File where
+  show = fileToDoc >>> pretty 80
+
+fileToDoc :: File -> Doc
+fileToDoc = go 0
+  where
+  go :: Int -> File -> Doc
+  go level parentFile =
+    DNest level
+      $ case parentFile of
+          RegularFileContaining content -> DText $ ">>|" <> encodeToString content <> "|<<"
+          DirectoryOf entries ->
+            if isEmpty entries then
+              DText "[]"
+            else
+              dirEntriesToDoc level entries
+
+  dirEntriesToDoc :: Int -> Map FileName File -> Doc
+  dirEntriesToDoc level =
+    foldlWithIndex
+      ( \fileName acc file ->
+          acc
+            <> DLine
+            <> DText "|- "
+            <> (DText $ encodeToString fileName)
+            <> DText " "
+            <> (go (level + 1) file)
+      )
+      DNil
 
 newtype FileNameSeparator
   = FileNameSeparator Char
@@ -43,6 +77,10 @@ instance stringCodecFileNameSeparator :: StringCodec FileNameSeparator where
 newtype Path
   = Path (Array FileName)
 
+derive newtype instance semigroupPath :: Semigroup Path
+
+derive newtype instance monoidPath :: Monoid Path
+
 instance stringCodecPath :: StringCodec Path where
   decodeFromString :: String -> String \/ Path
   decodeFromString = decodeUsingParser pathParser
@@ -58,6 +96,8 @@ newtype FileName
   = FileName NonEmptyString
 
 derive newtype instance eqFileName :: Eq FileName
+
+derive newtype instance ordFileName :: Ord FileName
 
 data FileType
   = RegularFile
@@ -98,3 +138,6 @@ fileNameParser = charsParser <#> (fromFoldable1 >>> fromNonEmptyCharArray >>> Fi
   where
   charsParser :: Parser (NonEmptyList Char)
   charsParser = many1 $ choice [ alphaNum, char '.', char '_', char '-' ]
+
+fromFileName :: FileName -> Path
+fromFileName name = Path [ name ]

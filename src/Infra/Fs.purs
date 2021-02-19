@@ -1,11 +1,17 @@
-module Ffi.Fs (exists, isDir, joinPaths, readDir, readFile, writeFile) where
+module Infra.Fs
+  ( exists
+  , isDir
+  , joinPaths
+  , mkDir
+  , readDir
+  , readFile
+  , writeFile
+  ) where
 
 import Prelude
 import Control.Promise (Promise, toAffE)
 import Effect (Effect)
 import Effect.Aff (Aff)
-import Effect.Aff.Compat (EffectFn1)
-import Foreign (Foreign)
 
 foreign import joinPaths :: String -> String -> String
 
@@ -16,6 +22,8 @@ foreign import mkReadFilePromise :: String -> Effect (Promise String)
 foreign import mkReadDirPromise :: String -> Effect (Promise (Array String))
 
 foreign import mkIsDirPromise :: String -> Effect (Promise Boolean)
+
+foreign import mkMkDirPromise :: String -> Effect (Promise Unit)
 
 foreign import mkWriteFilePromise :: String -> String -> Effect (Promise Unit)
 
@@ -30,6 +38,9 @@ readDir = toAffE <<< mkReadDirPromise
 
 isDir :: String -> Aff Boolean
 isDir = toAffE <<< mkIsDirPromise
+
+mkDir :: String -> Aff Unit
+mkDir path = toAffE $ mkMkDirPromise path
 
 writeFile :: String -> String -> Aff Unit
 writeFile path content = toAffE $ mkWriteFilePromise path content

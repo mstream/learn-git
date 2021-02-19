@@ -3,7 +3,7 @@ module ProdApi (runApi) where
 import Prelude
 import Api (AppM, runAppM)
 import Api.Fs (isDir, readDir, readFile, writeFile)
-import Core.FileSystem (FileContent, FileName, FileType(..), Path)
+import Core.Fs (FileContent, FileName, FileType(..), Path)
 import Core.Logger (LogEntry, LogLevel(..), logLevel)
 import Core.StringCodec (decodeFromString, encodeToString)
 import Data.Either (Either(..))
@@ -13,16 +13,25 @@ import Effect (Effect)
 import Effect.Aff (Aff, attempt, message)
 import Effect.Class (liftEffect)
 import Effect.Console (error, info, warn)
+import Infra.Fs (mkDir)
 
 runApi :: AppM ~> Aff
 runApi =
   runAppM
-    { getFileContent: getFileContent
+    { createDirectory: createDirectory
+    , getFileContent: getFileContent
     , getFileNames: getFileNames
     , getFileType: getFileType
     , log: log
     , saveFileContent: saveFileContent
     }
+
+createDirectory :: Path -> Aff (String \/ Unit)
+createDirectory path = do
+  result <- attempt $ mkDir $ encodeToString path
+  pure case result of
+    Left error -> Left $ message error
+    Right _ -> pure unit
 
 getFileContent :: Path -> Aff (String \/ FileContent)
 getFileContent path = do

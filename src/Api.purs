@@ -1,18 +1,20 @@
-module Api (AppM, Environment, runAppM) where
+module Api (AppM, Env, ParAppM, runAppM) where
 
 import Prelude
 import Control.Monad.Reader (class MonadAsk, ReaderT, ask, asks, runReaderT)
-import Core.FileSystem (FileContent, FileName, FileType, Path)
+import Control.Parallel (class Parallel, parallel, sequential)
+import Core.Fs (FileContent, FileName, FileType, Path)
 import Core.Logger (LogEntry)
 import Data.Either.Nested (type (\/))
-import Domain.Capabilities (class GetFileContent, class GetFileNames, class GetFileType, class Log, class SaveFileContent)
-import Effect.Aff (Aff)
+import Domain.Caps (class CreateDirectory, class GetFileContent, class GetFileNames, class GetFileType, class Log, class SaveFileContent, createDirectory)
+import Effect.Aff (Aff, ParAff)
 import Effect.Aff.Class (class MonadAff, liftAff)
 import Effect.Class (class MonadEffect)
 import Type.Prelude (class TypeEquals, from)
 
-type Environment
-  = { getFileContent :: Path -> Aff (String \/ FileContent)
+type Env
+  = { createDirectory :: Path -> Aff (String \/ Unit)
+    , getFileContent :: Path -> Aff (String \/ FileContent)
     , getFileNames :: Path -> Aff (String \/ Array FileName)
     , getFileType :: Path -> Aff (String \/ FileType)
     , log :: LogEntry -> Aff Unit
@@ -20,9 +22,9 @@ type Environment
     }
 
 newtype AppM a
-  = AppM (ReaderT Environment Aff a)
+  = AppM (ReaderT Env Aff a)
 
-runAppM :: Environment -> AppM ~> Aff
+runAppM :: Env -> AppM ~> Aff
 runAppM env (AppM m) = runReaderT m env
 
 derive newtype instance functorAppM :: Functor AppM
@@ -39,8 +41,27 @@ derive newtype instance monadEffectAppM :: MonadEffect AppM
 
 derive newtype instance monadAffAppM :: MonadAff AppM
 
-instance monadAskAppM :: TypeEquals e Environment => MonadAsk e AppM where
+instance monadAskAppM :: TypeEquals e Env => MonadAsk e AppM where
   ask = AppM $ asks from
+
+newtype ParAppM a
+  = ParAppM (ReaderT Env ParAff a)
+
+derive newtype instance functorParAppM :: Functor ParAppM
+
+derive newtype instance applyParAppM :: Apply ParAppM
+
+derive newtype instance applicativeParAppM :: Applicative ParAppM
+
+instance parallelAppM :: Parallel ParAppM AppM where
+  parallel (AppM readerT) = ParAppM (parallel readerT)
+  sequential (ParAppM readerT) = AppM (sequential readerT)
+
+instance createDirectoryAppM :: CreateDirectory AppM where
+  createDirectory :: Path -> AppM (String \/ Unit)
+  createDirectory path = do
+    env <- ask
+    liftAff $ env.createDirectory path
 
 instance getFileContentAppM :: GetFileContent AppM where
   getFileContent :: Path -> AppM (String \/ FileContent)
