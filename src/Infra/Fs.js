@@ -1,48 +1,96 @@
-const filer = require("filer");
-
-const path = filer.Path
-
-const fs = new filer.FileSystem({
-  name: "in-memory-fs",
-  flags: ["FORMAT"],
-  provider: new filer.FileSystem.providers.Memory()
-}).promises;
+const BrowserFS = require("browserfs");
+const git = require("isomorphic-git");
 
 const encoding = "utf8";
 
-const reportError = name => err => console.error("error in", name, err);
+const fsPromise = new Promise((resolve, reject) => {
+  BrowserFS.configure({
+    fs: "InMemory",
+  }, (err) => err ? reject(err) : resolve());
+  setTimeout(reject, 1000);
+}).then(() => {
+  const fs = BrowserFS.BFSRequire("fs");
 
-const reportValue = name => val => {
-  console.debug("executing", name, "with result", val);
-  return new Promise(resolve => resolve(val));
-};
+  const exists = path => new Promise(resolve =>
+    fs.exists(path, resolve));
+
+  const lstat =
+    path => new Promise((resolve, reject) =>
+      fs.lstat(path, (err, stats) =>
+        err ? reject(err) : resolve(stats)));
+
+  const mkdir =
+    path => new Promise(
+      (resolve, reject) =>
+      fs.mkdir(path, err => err ? reject(e) : resolve()));
+
+  const readdir = path => new Promise((resolve, reject) =>
+    fs.readdir(path, (err, fileNames) =>
+      err ? reject(err) : resolve(fileNames)));
+
+  const readFile = path => new Promise((resolve, reject) =>
+    fs.readFile(path, encoding, (err, fileNames) =>
+      err ? reject(err) : resolve(fileNames)));
+
+  const writeFile = (path, data) => new Promise((resolve, reject) =>
+    fs.writeFile(path, data, encoding, (err, fileNames) =>
+      err ? reject(err) : resolve(fileNames)));
+
+  return {
+    exists,
+    fs,
+    lstat,
+    mkdir,
+    readdir,
+    readFile,
+    writeFile,
+  };
+});
 
 exports.joinPaths = path1 => path2 => path.join(path1, path2)
 
 exports.mkExistsPromise = (path) => () =>
-  fs.exists(path).then(reportValue("exists")).catch(reportError("exists"));
+  fsPromise.then(({
+    exists
+  }) => exists(path));
 
 exports.mkReadDirPromise = (path) => () =>
-  fs.readdir(path).then(reportValue("readDir")).catch(reportError("readDir"));
+  fsPromise
+  .then(({
+    readdir
+  }) => readdir(path));
 
 exports.mkReadFilePromise = (path) => () =>
-  fs.readFile(path, {
-    encoding
-  }).then(reportValue("readFile")).catch(reportError("readFile"));
+  fsPromise
+  .then(({
+    readFile
+  }) => readFile(path));
 
-exports.mkMkDirPromise = (path) => () => {
-  console.log(path)
-  return fs.mkdir(path).then(reportValue("mkDir")).catch(reportError("mkDir"));
-}
 
-exports.mkWriteFilePromise = (path) => (data) => () => {
-  console.log(path)
-  return fs.writeFile(path, data).then(reportValue("writeFile")).catch(reportError("writeFile"));
-}
+exports.mkMkDirPromise = (path) => () =>
+  fsPromise
+  .then(({
+    mkdir
+  }) => mkdir(path));
 
-exports.mkIsDirPromise = (path) => () =>
-  fs.lstat(path)
-  .then(reportValue("lstat"))
-  .then(stats => stats.isDirectory())
-  .then(reportValue("isDirectory"))
-  .catch(reportError("isDir"));
+exports.mkWriteFilePromise = (path) => (data) => () =>
+  fsPromise
+  .then(({
+    writeFile
+  }) => writeFile(path, data));
+
+exports.mkIsDirPromise =
+  (path) => () =>
+  fsPromise.then(({
+    lstat
+  }) => lstat(path))
+  .then(stats => stats.isDirectory());
+
+exports.mkGitInitPromise = (path) => () =>
+  fsPromise
+  .then(({
+    fs
+  }) => git.init({
+    dir: path,
+    fs,
+  }));

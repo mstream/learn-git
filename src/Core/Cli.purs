@@ -11,7 +11,8 @@ import Text.Parsing.StringParser.Combinators (between, choice)
 
 data Cmd
   = EditFile Path FileContent
-  | MakeDirectory Path
+  | GitInit Path
+  | MakeDir Path
 
 instance stringCodecCmd :: StringCodec Cmd where
   decodeFromString :: String -> String \/ Cmd
@@ -19,7 +20,8 @@ instance stringCodecCmd :: StringCodec Cmd where
   encodeToString :: Cmd -> String
   encodeToString = case _ of
     EditFile path content -> "edit " <> encodeToString path <> " \"" <> encodeToString content <> "\""
-    MakeDirectory path -> "mkdir " <> encodeToString path
+    GitInit path -> "git init " <> encodeToString path
+    MakeDir path -> "mkdir " <> encodeToString path
 
 cmdParser :: Parser Cmd
 cmdParser = do
@@ -38,10 +40,17 @@ cmdParser = do
         content <- between (char '"') (char '"') fileContentParser
         pure $ EditFile path content
     , do
+        void $ string "git"
+        skipSpaces
+        void $ string "init"
+        skipSpaces
+        path <- pathParser
+        pure $ GitInit path
+    , do
         void $ string "mkdir"
         skipSpaces
         path <- pathParser
-        pure $ MakeDirectory path
+        pure $ MakeDir path
     ]
 
 quoteParser :: Parser Char
@@ -50,9 +59,11 @@ quoteParser = char '"' <|> char '\''
 commandName :: Cmd -> String
 commandName = case _ of
   EditFile _ _ -> "edit"
-  MakeDirectory _ -> "mkdir"
+  GitInit _ -> "git init"
+  MakeDir _ -> "mkdir"
 
 commandArgs :: Cmd -> Array String
 commandArgs = case _ of
   EditFile path content -> [ encodeToString path, encodeToString content ]
-  MakeDirectory path -> [ encodeToString path ]
+  GitInit path -> [ encodeToString path ]
+  MakeDir path -> [ encodeToString path ]

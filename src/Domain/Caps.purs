@@ -3,12 +3,14 @@ module Domain.Caps
   , class GetFileContent
   , class GetFileNames
   , class GetFileType
+  , class InitGitRepo
   , class Log
   , class SaveFileContent
   , createDirectory
   , getFileContent
   , getFileNames
   , getFileType
+  , initGitRepo
   , log
   , saveFileContent
   ) where
@@ -34,6 +36,10 @@ class
 class
   (Monad m) <= GetFileType m where
   getFileType :: Path -> m (String \/ FileType)
+
+class
+  (Monad m) <= InitGitRepo m where
+  initGitRepo :: Path -> m (String \/ Unit)
 
 class
   (Monad m) <= Log m where

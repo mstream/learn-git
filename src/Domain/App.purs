@@ -16,45 +16,45 @@ import Data.List ((:))
 import Data.Map (fromFoldable)
 import Data.Set (Set, insert)
 import Data.Symbol (SProxy(..))
-import Domain.Caps (class CreateDirectory, class GetFileContent, class GetFileNames, class GetFileType, class Log, class SaveFileContent, createDirectory, getFileContent, getFileNames, getFileType, log, saveFileContent)
+import Domain.Caps (class CreateDirectory, class GetFileContent, class GetFileNames, class GetFileType, class InitGitRepo, class Log, class SaveFileContent, createDirectory, getFileContent, getFileNames, getFileType, initGitRepo, log, saveFileContent)
 
-handleEvent :: forall f m. Parallel f m => CreateDirectory m => GetFileContent m => GetFileNames m => GetFileType m => Log m => SaveFileContent m => State -> Event -> m State
+handleEvent :: forall f m. Parallel f m => CreateDirectory m => GetFileContent m => GetFileNames m => GetFileType m => InitGitRepo m => Log m => SaveFileContent m => State -> Event -> m State
 handleEvent state event = case event of
-  CmdExecRequested input -> handleCmdExecRequested state input
+  CmdExecRequested input -> do
+    cmdExecRes <- handleCmdExecRequested state input
+    newFileTreeRes <- getFileTree
+    case cmdExecRes, newFileTreeRes of
+      Left cmdExecErrMsg, Left newFileTreeErrMsg -> do
+        newCliLogs <- cliLog mempty $ logEntry Error (SProxy :: SProxy "Command execution failed failed") cmdExecErrMsg
+        newCliLogs' <- cliLog newCliLogs $ logEntry Error (SProxy :: SProxy "File tree retrieval failed") newFileTreeErrMsg
+        pure $ state { cliLogs = newCliLogs }
+      Left cmdExecErrMsg, Right newFileTree -> do
+        newCliLogs <- cliLog mempty $ logEntry Error (SProxy :: SProxy "Command execution failed failed") cmdExecErrMsg
+        pure $ state { cliLogs = newCliLogs, fileTree = newFileTree }
+      Right cmd, Left newFileTreeErrMsg -> do
+        newCliLogs <- cliLog mempty $ logEntry Error (SProxy :: SProxy "File tree retrieval failed") newFileTreeErrMsg
+        pure $ state { cliHistory = cmd : state.cliHistory, cliLogs = newCliLogs }
+      Right cmd, Right newFileTree -> do
+        pure $ state { cliHistory = cmd : state.cliHistory, fileTree = newFileTree }
 
-handleCmdExecRequested :: forall f m. Parallel f m => CreateDirectory m => GetFileContent m => GetFileNames m => GetFileType m => Log m => SaveFileContent m => State -> String -> m State
+handleCmdExecRequested :: forall f m. Parallel f m => CreateDirectory m => GetFileContent m => GetFileNames m => GetFileType m => InitGitRepo m => Log m => SaveFileContent m => State -> String -> m (String \/ Cmd)
 handleCmdExecRequested state input = case decodeFromString input of
   Right editFileCmd@(EditFile path content) -> do
-    result <- saveFileContent path content
-    case result of
-      Right _ -> do
-        newCliLogs <- cliLog mempty $ logEntry Info (SProxy :: SProxy "Command executed") input
-        newFileTreeRes <- getFileTree
-        case newFileTreeRes of
-          Left errMsg -> do
-            newCliLogs' <- cliLog newCliLogs $ logEntry Error (SProxy :: SProxy "File tree retrieval failed") errMsg
-            pure $ state { cliLogs = newCliLogs' }
-          Right newFileTree -> pure $ state { cliHistory = editFileCmd : state.cliHistory, cliInput = "", cliLogs = newCliLogs, fileTree = newFileTree }
-      Left errMsg -> do
-        newCliLogs <- cliLog mempty $ logEntry Error (SProxy :: SProxy "Command execution failed") input
-        pure $ state { cliLogs = newCliLogs }
-  Right makeDirectoryCmd@(MakeDirectory path) -> do
-    result <- createDirectory path
-    case result of
-      Right _ -> do
-        newCliLogs <- cliLog mempty $ logEntry Info (SProxy :: SProxy "Command executed") input
-        newFileTreeRes <- getFileTree
-        case newFileTreeRes of
-          Left errMsg -> do
-            newCliLogs' <- cliLog newCliLogs $ logEntry Error (SProxy :: SProxy "File tree retrieval failed") errMsg
-            pure $ state { cliLogs = newCliLogs' }
-          Right newFileTree -> pure $ state { cliHistory = makeDirectoryCmd : state.cliHistory, cliInput = "", cliLogs = newCliLogs, fileTree = newFileTree }
-      Left errMsg -> do
-        newCliLogs <- cliLog mempty $ logEntry Error (SProxy :: SProxy "Command execution failed") input
-        pure $ state { cliLogs = newCliLogs }
-  Left errMsg -> do
-    newCliLogs <- cliLog mempty $ logEntry Error (SProxy :: SProxy "Command validation failed") (input <> " " <> errMsg)
-    pure $ state { cliLogs = newCliLogs }
+    res <- saveFileContent path content
+    pure case res of
+      Left errMsg -> Left $ "could not edit file because of " <> errMsg
+      Right _ -> Right editFileCmd
+  Right gitInitCmd@(GitInit path) -> do
+    res <- initGitRepo path
+    pure case res of
+      Left errMsg -> Left $ "could not initialize git repository because of " <> errMsg
+      Right _ -> Right gitInitCmd
+  Right makeDirCmd@(MakeDir path) -> do
+    res <- createDirectory path
+    pure case res of
+      Left errMsg -> Left $ "could not create directory because of " <> errMsg
+      Right _ -> Right makeDirCmd
+  Left decodingErrMsg -> pure $ Left $ "could not parse the input '" <> input <> "'"
 
 getFileTree :: forall f m. Parallel f m => GetFileContent m => GetFileNames m => GetFileType m => m (String \/ File)
 getFileTree = runExceptT $ go $ mempty

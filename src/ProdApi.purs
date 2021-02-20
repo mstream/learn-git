@@ -2,7 +2,6 @@ module ProdApi (runApi) where
 
 import Prelude
 import Api (AppM, runAppM)
-import Api.Fs (isDir, readDir, readFile, writeFile)
 import Core.Fs (FileContent, FileName, FileType(..), Path)
 import Core.Logger (LogEntry, LogLevel(..), logLevel)
 import Core.StringCodec (decodeFromString, encodeToString)
@@ -13,7 +12,7 @@ import Effect (Effect)
 import Effect.Aff (Aff, attempt, message)
 import Effect.Class (liftEffect)
 import Effect.Console (error, info, warn)
-import Infra.Fs (mkDir)
+import Infra.Fs (gitInit, isDir, mkDir, readDir, readFile, writeFile)
 
 runApi :: AppM ~> Aff
 runApi =
@@ -22,6 +21,7 @@ runApi =
     , getFileContent: getFileContent
     , getFileNames: getFileNames
     , getFileType: getFileType
+    , initGitRepo: initGitRepo
     , log: log
     , saveFileContent: saveFileContent
     }
@@ -53,6 +53,13 @@ getFileType path = do
   pure case result of
     Left error -> Left $ message error
     Right b -> if b then Right Directory else Right RegularFile
+
+initGitRepo :: Path -> Aff (String \/ Unit)
+initGitRepo path = do
+  result <- attempt $ gitInit $ encodeToString path
+  pure case result of
+    Left error -> Left $ message error
+    Right _ -> Right unit
 
 log :: LogEntry -> Aff Unit
 log entry = liftEffect $ logToConsole $ encodeToString entry

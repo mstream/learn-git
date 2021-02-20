@@ -1,5 +1,6 @@
 module Infra.Fs
   ( exists
+  , gitInit
   , isDir
   , joinPaths
   , mkDir
@@ -17,6 +18,8 @@ foreign import joinPaths :: String -> String -> String
 
 foreign import mkExistsPromise :: String -> Effect (Promise Boolean)
 
+foreign import mkGitInitPromise :: String -> Effect (Promise Unit)
+
 foreign import mkReadFilePromise :: String -> Effect (Promise String)
 
 foreign import mkReadDirPromise :: String -> Effect (Promise (Array String))
@@ -29,6 +32,9 @@ foreign import mkWriteFilePromise :: String -> String -> Effect (Promise Unit)
 
 exists :: String -> Aff Boolean
 exists = toAffE <<< mkExistsPromise
+
+gitInit :: String -> Aff Unit
+gitInit = toAffE <<< mkGitInitPromise
 
 readFile :: String -> Aff String
 readFile = toAffE <<< mkReadFilePromise

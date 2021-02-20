@@ -14,14 +14,15 @@ import Test.Spec.Reporter.Console (consoleReporter)
 import Test.Spec.Runner (runSpec)
 
 main :: Effect Unit
-main =
+main = do
   launchAff_
     $ runSpec [ consoleReporter ] do
-        describe "FileSystem.FileName" do
+        describe "Core.Fs" do
           it "codes file name" $ recodeFileName "abc"
           it "codes path" $ recodePath "/abc/def"
           it "codes file content" $ recodeFileContent "content"
           it "codes edit command" $ recodeCmd "edit /abc \"content\""
+          it "codes git init command" $ recodeCmd "git init /abc"
           it "codes mkdir command" $ recodeCmd "mkdir /abc"
 
 recodeCmd :: String -> Aff Unit

@@ -6,7 +6,7 @@ import Control.Parallel (class Parallel, parallel, sequential)
 import Core.Fs (FileContent, FileName, FileType, Path)
 import Core.Logger (LogEntry)
 import Data.Either.Nested (type (\/))
-import Domain.Caps (class CreateDirectory, class GetFileContent, class GetFileNames, class GetFileType, class Log, class SaveFileContent, createDirectory)
+import Domain.Caps (class CreateDirectory, class GetFileContent, class GetFileNames, class GetFileType, class InitGitRepo, class Log, class SaveFileContent)
 import Effect.Aff (Aff, ParAff)
 import Effect.Aff.Class (class MonadAff, liftAff)
 import Effect.Class (class MonadEffect)
@@ -17,6 +17,7 @@ type Env
     , getFileContent :: Path -> Aff (String \/ FileContent)
     , getFileNames :: Path -> Aff (String \/ Array FileName)
     , getFileType :: Path -> Aff (String \/ FileType)
+    , initGitRepo :: Path -> Aff (String \/ Unit)
     , log :: LogEntry -> Aff Unit
     , saveFileContent :: Path -> FileContent -> Aff (String \/ Unit)
     }
@@ -80,6 +81,12 @@ instance getFileTypeAppM :: GetFileType AppM where
   getFileType path = do
     env <- ask
     liftAff $ env.getFileType path
+
+instance initGitRepoAppM :: InitGitRepo AppM where
+  initGitRepo :: Path -> AppM (String \/ Unit)
+  initGitRepo path = do
+    env <- ask
+    liftAff $ env.initGitRepo path
 
 instance logAppM :: Log AppM where
   log :: LogEntry -> AppM Unit
