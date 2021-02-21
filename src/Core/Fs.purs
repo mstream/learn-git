@@ -6,6 +6,7 @@ module Core.Fs
   , Path
   , PathSpec
   , binaryFileContent
+  , isBinary
   , textualFileContentParser
   , fromFileName
   , pathParser
@@ -135,6 +136,11 @@ instance stringCodecFileContent :: StringCodec FileContent where
 
 binaryFileContent :: FileContent
 binaryFileContent = Binary
+
+isBinary :: FileContent -> Boolean
+isBinary = case _ of
+  Binary -> true
+  Textual _ -> false
 
 pathParser :: Parser Path
 pathParser = segmentsParser <#> (fromFoldable >>> Path)

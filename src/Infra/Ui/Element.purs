@@ -2,8 +2,9 @@ module Infra.Ui.Element (module Exports, Element, runInDom) where
 
 import Concur.Core (Widget)
 import Concur.React (HTML)
-import Concur.React.DOM (div, div', input, li, li', p', p, pre, pre', text, ul, ul') as Exports
-import Concur.React.Props (_type, className, onChange, onKeyEnter, unsafeTargetValue, value) as Exports
+import Concur.React.DOM (div, div', input, i, i', li, li', p', p, pre, pre', text, ul, ul') as Exports
+import Concur.React.Props (_type, className, d, fill, onChange, onKeyEnter, unsafeTargetValue, value, viewBox) as Exports
+import Concur.React.SVG (path, path', svg, svg') as Exports
 import Concur.React.Run (runWidgetInDom)
 import Effect (Effect)
 import Prelude (Unit)
