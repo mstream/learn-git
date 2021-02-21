@@ -2,8 +2,10 @@
 , name = "learn-git"
 , dependencies =
   [ "aff-promise"
+  , "arraybuffer-types"
   , "concur-react"
   , "motsunabe"
+  , "node-buffer"
   , "quickcheck"
   , "spec"
   , "spec-quickcheck"

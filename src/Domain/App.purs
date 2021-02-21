@@ -3,7 +3,7 @@ module Domain.App (handleEvent) where
 import Prelude
 import Control.Monad.Except (ExceptT(..), runExceptT)
 import Control.Parallel (class Parallel, parSequence)
-import Core.Cli (Cmd(..))
+import Core.Cli (Cmd(..), GitCmd(..))
 import Core.Event (Event(..))
 import Core.Fs (File(..), FileType(..), Path, fromFileName)
 import Core.Logger (LogEntry, LogLevel(..), logEntry)
@@ -16,9 +16,22 @@ import Data.List ((:))
 import Data.Map (fromFoldable)
 import Data.Set (Set, insert)
 import Data.Symbol (SProxy(..))
-import Domain.Caps (class CreateDirectory, class GetFileContent, class GetFileNames, class GetFileType, class InitGitRepo, class Log, class SaveFileContent, createDirectory, getFileContent, getFileNames, getFileType, initGitRepo, log, saveFileContent)
+import Domain.Caps (class CreateDirectory, class GetFileContent, class GetFileNames, class GetFileType, class InitGitRepo, class Log, class SaveFileContent, class StageFiles, createDirectory, getFileContent, getFileNames, getFileType, initGitRepo, log, saveFileContent, stageFiles)
 
-handleEvent :: forall f m. Parallel f m => CreateDirectory m => GetFileContent m => GetFileNames m => GetFileType m => InitGitRepo m => Log m => SaveFileContent m => State -> Event -> m State
+handleEvent ::
+  forall f m.
+  Parallel f m =>
+  CreateDirectory m =>
+  GetFileContent m =>
+  GetFileNames m =>
+  GetFileType m =>
+  InitGitRepo m =>
+  Log m =>
+  SaveFileContent m =>
+  StageFiles m =>
+  State ->
+  Event ->
+  m State
 handleEvent state event = case event of
   CmdExecRequested input -> do
     cmdExecRes <- handleCmdExecRequested state input
@@ -37,14 +50,32 @@ handleEvent state event = case event of
       Right cmd, Right newFileTree -> do
         pure $ state { cliHistory = cmd : state.cliHistory, fileTree = newFileTree }
 
-handleCmdExecRequested :: forall f m. Parallel f m => CreateDirectory m => GetFileContent m => GetFileNames m => GetFileType m => InitGitRepo m => Log m => SaveFileContent m => State -> String -> m (String \/ Cmd)
+handleCmdExecRequested ::
+  forall f m.
+  Parallel f m =>
+  CreateDirectory m =>
+  GetFileContent m =>
+  GetFileNames m =>
+  GetFileType m =>
+  InitGitRepo m =>
+  Log m =>
+  SaveFileContent m =>
+  StageFiles m =>
+  State ->
+  String ->
+  m (String \/ Cmd)
 handleCmdExecRequested state input = case decodeFromString input of
   Right editFileCmd@(EditFile path content) -> do
     res <- saveFileContent path content
     pure case res of
       Left errMsg -> Left $ "could not edit file because of " <> errMsg
       Right _ -> Right editFileCmd
-  Right gitInitCmd@(GitInit path) -> do
+  Right gitAddCmd@(Git (GitAdd repoDirPath pathSpec)) -> do
+    res <- stageFiles repoDirPath pathSpec
+    pure case res of
+      Left errMsg -> Left $ "could not stage files because of " <> errMsg
+      Right _ -> Right gitAddCmd
+  Right gitInitCmd@(Git (GitInit path)) -> do
     res <- initGitRepo path
     pure case res of
       Left errMsg -> Left $ "could not initialize git repository because of " <> errMsg

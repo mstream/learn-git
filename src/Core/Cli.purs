@@ -1,17 +1,21 @@
-module Core.Cli (Cmd(..), commandArgs, commandName) where
+module Core.Cli (Cmd(..), GitCmd(..), commandArgs, commandName) where
 
-import Prelude
+import Prelude hiding (between)
 import Control.Alt ((<|>))
-import Core.Fs (FileContent, Path, fileContentParser, pathParser)
+import Core.Fs (FileContent, Path, PathSpec, pathParser, pathSpecParser, textualFileContentParser)
 import Core.StringCodec (class StringCodec, decodeUsingParser, encodeToString)
 import Data.Either.Nested (type (\/))
 import Text.Parsing.StringParser (Parser)
 import Text.Parsing.StringParser.CodePoints (char, skipSpaces, string)
 import Text.Parsing.StringParser.Combinators (between, choice)
 
+data GitCmd
+  = GitAdd Path PathSpec
+  | GitInit Path
+
 data Cmd
   = EditFile Path FileContent
-  | GitInit Path
+  | Git GitCmd
   | MakeDir Path
 
 instance stringCodecCmd :: StringCodec Cmd where
@@ -20,7 +24,8 @@ instance stringCodecCmd :: StringCodec Cmd where
   encodeToString :: Cmd -> String
   encodeToString = case _ of
     EditFile path content -> "edit " <> encodeToString path <> " \"" <> encodeToString content <> "\""
-    GitInit path -> "git init " <> encodeToString path
+    Git (GitAdd repoDirPath pathSpec) -> "git add " <> encodeToString repoDirPath <> " " <> encodeToString pathSpec
+    Git (GitInit repoDirPath) -> "git init " <> encodeToString repoDirPath
     MakeDir path -> "mkdir " <> encodeToString path
 
 cmdParser :: Parser Cmd
@@ -37,20 +42,34 @@ cmdParser = do
         skipSpaces
         path <- pathParser
         skipSpaces
-        content <- between (char '"') (char '"') fileContentParser
+        content <- between (char '"') (char '"') textualFileContentParser
         pure $ EditFile path content
     , do
         void $ string "git"
         skipSpaces
-        void $ string "init"
-        skipSpaces
-        path <- pathParser
-        pure $ GitInit path
+        gitSubCmd <- choice gitSubCmdParsers
+        pure $ Git gitSubCmd
     , do
         void $ string "mkdir"
         skipSpaces
         path <- pathParser
         pure $ MakeDir path
+    ]
+
+  gitSubCmdParsers :: Array (Parser GitCmd)
+  gitSubCmdParsers =
+    [ do
+        void $ string "add"
+        skipSpaces
+        repoDirPath <- pathParser
+        skipSpaces
+        pathSpec <- pathSpecParser
+        pure $ GitAdd repoDirPath pathSpec
+    , do
+        void $ string "init"
+        skipSpaces
+        repoDirPath <- pathParser
+        pure $ GitInit repoDirPath
     ]
 
 quoteParser :: Parser Char
@@ -59,11 +78,13 @@ quoteParser = char '"' <|> char '\''
 commandName :: Cmd -> String
 commandName = case _ of
   EditFile _ _ -> "edit"
-  GitInit _ -> "git init"
+  Git (GitAdd _ _) -> "git add"
+  Git (GitInit _) -> "git init"
   MakeDir _ -> "mkdir"
 
 commandArgs :: Cmd -> Array String
 commandArgs = case _ of
   EditFile path content -> [ encodeToString path, encodeToString content ]
-  GitInit path -> [ encodeToString path ]
+  Git (GitAdd repoDirPath pathSpec) -> [ encodeToString repoDirPath, encodeToString pathSpec ]
+  Git (GitInit repoDirPath) -> [ encodeToString repoDirPath ]
   MakeDir path -> [ encodeToString path ]

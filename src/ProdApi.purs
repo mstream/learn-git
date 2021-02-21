@@ -2,7 +2,7 @@ module ProdApi (runApi) where
 
 import Prelude
 import Api (AppM, runAppM)
-import Core.Fs (FileContent, FileName, FileType(..), Path)
+import Core.Fs (FileContent, FileName, FileType(..), Path, PathSpec, binaryFileContent)
 import Core.Logger (LogEntry, LogLevel(..), logLevel)
 import Core.StringCodec (decodeFromString, encodeToString)
 import Data.Either (Either(..))
@@ -12,7 +12,9 @@ import Effect (Effect)
 import Effect.Aff (Aff, attempt, message)
 import Effect.Class (liftEffect)
 import Effect.Console (error, info, warn)
-import Infra.Fs (gitInit, isDir, mkDir, readDir, readFile, writeFile)
+import Infra.Fs (gitAdd, gitInit, isBinary, isDir, mkDir, readDir, readFile, writeFile)
+import Node.Buffer.Immutable (ImmutableBuffer, fromArrayBuffer, toArrayBuffer, toString)
+import Node.Encoding (Encoding(..))
 
 runApi :: AppM ~> Aff
 runApi =
@@ -24,6 +26,7 @@ runApi =
     , initGitRepo: initGitRepo
     , log: log
     , saveFileContent: saveFileContent
+    , stageFiles: stageFiles
     }
 
 createDirectory :: Path -> Aff (String \/ Unit)
@@ -38,7 +41,15 @@ getFileContent path = do
   result <- attempt $ readFile $ encodeToString path
   pure case result of
     Left error -> Left $ message error
-    Right s -> decodeFromString s
+    Right b ->
+      let
+        buffer :: ImmutableBuffer
+        buffer = fromArrayBuffer b
+      in
+        if isBinary $ toArrayBuffer buffer then
+          Right binaryFileContent
+        else
+          decodeFromString $ toString UTF8 buffer
 
 getFileNames :: Path -> Aff (String \/ Array FileName)
 getFileNames path = do
@@ -73,6 +84,13 @@ log entry = liftEffect $ logToConsole $ encodeToString entry
 saveFileContent :: Path -> FileContent -> Aff (String \/ Unit)
 saveFileContent path content = do
   result <- attempt $ writeFile (encodeToString path) (encodeToString content)
+  pure case result of
+    Left error -> Left $ message error
+    Right _ -> Right unit
+
+stageFiles :: Path -> PathSpec -> Aff (String \/ Unit)
+stageFiles repoDirPath pathSpec = do
+  result <- attempt $ gitAdd (encodeToString repoDirPath) (encodeToString pathSpec)
   pure case result of
     Left error -> Left $ message error
     Right _ -> Right unit

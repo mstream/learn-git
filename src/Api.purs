@@ -3,10 +3,10 @@ module Api (AppM, Env, ParAppM, runAppM) where
 import Prelude
 import Control.Monad.Reader (class MonadAsk, ReaderT, ask, asks, runReaderT)
 import Control.Parallel (class Parallel, parallel, sequential)
-import Core.Fs (FileContent, FileName, FileType, Path)
+import Core.Fs (FileContent, FileName, FileType, Path, PathSpec)
 import Core.Logger (LogEntry)
 import Data.Either.Nested (type (\/))
-import Domain.Caps (class CreateDirectory, class GetFileContent, class GetFileNames, class GetFileType, class InitGitRepo, class Log, class SaveFileContent)
+import Domain.Caps (class CreateDirectory, class GetFileContent, class GetFileNames, class GetFileType, class InitGitRepo, class Log, class SaveFileContent, class StageFiles)
 import Effect.Aff (Aff, ParAff)
 import Effect.Aff.Class (class MonadAff, liftAff)
 import Effect.Class (class MonadEffect)
@@ -20,6 +20,7 @@ type Env
     , initGitRepo :: Path -> Aff (String \/ Unit)
     , log :: LogEntry -> Aff Unit
     , saveFileContent :: Path -> FileContent -> Aff (String \/ Unit)
+    , stageFiles :: Path -> PathSpec -> Aff (String \/ Unit)
     }
 
 newtype AppM a
@@ -84,9 +85,9 @@ instance getFileTypeAppM :: GetFileType AppM where
 
 instance initGitRepoAppM :: InitGitRepo AppM where
   initGitRepo :: Path -> AppM (String \/ Unit)
-  initGitRepo path = do
+  initGitRepo repoDirPath = do
     env <- ask
-    liftAff $ env.initGitRepo path
+    liftAff $ env.initGitRepo repoDirPath
 
 instance logAppM :: Log AppM where
   log :: LogEntry -> AppM Unit
@@ -99,3 +100,9 @@ instance saveFileContentAppM :: SaveFileContent AppM where
   saveFileContent path content = do
     env <- ask
     liftAff $ env.saveFileContent path content
+
+instance stageFilesAppM :: StageFiles AppM where
+  stageFiles :: Path -> PathSpec -> AppM (String \/ Unit)
+  stageFiles repoDirPath pathSpec = do
+    env <- ask
+    liftAff $ env.stageFiles repoDirPath pathSpec

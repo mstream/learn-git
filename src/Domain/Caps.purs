@@ -6,6 +6,7 @@ module Domain.Caps
   , class InitGitRepo
   , class Log
   , class SaveFileContent
+  , class StageFiles
   , createDirectory
   , getFileContent
   , getFileNames
@@ -13,12 +14,12 @@ module Domain.Caps
   , initGitRepo
   , log
   , saveFileContent
+  , stageFiles
   ) where
 
 import Prelude
-import Core.Event (Event)
-import Core.Fs (FileContent, FileName, FileType, Path)
-import Core.Logger (LogEntry(..))
+import Core.Fs (FileContent, FileName, FileType, Path, PathSpec)
+import Core.Logger (LogEntry)
 import Data.Either.Nested (type (\/))
 
 class
@@ -36,6 +37,10 @@ class
 class
   (Monad m) <= GetFileType m where
   getFileType :: Path -> m (String \/ FileType)
+
+class
+  (Monad m) <= StageFiles m where
+  stageFiles :: Path -> PathSpec -> m (String \/ Unit)
 
 class
   (Monad m) <= InitGitRepo m where

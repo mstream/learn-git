@@ -5,7 +5,7 @@
   "scripts": {
     "build": "spago build",
     "install": "spago install",
-    "start": "npm run install && npm run build && npm run test && parcel index.html",
+    "start": "npm install && npm run install && npm run build && npm run test && parcel index.html",
     "test": "spago test"
   },
   "author": "",
