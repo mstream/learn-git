@@ -16,11 +16,12 @@ import Data.List ((:))
 import Data.Map (fromFoldable)
 import Data.Set (Set, insert)
 import Data.Symbol (SProxy(..))
-import Domain.Caps (class CreateDirectory, class GetFileContent, class GetFileNames, class GetFileType, class InitGitRepo, class Log, class SaveFileContent, class StageFiles, createDirectory, getFileContent, getFileNames, getFileType, initGitRepo, log, saveFileContent, stageFiles)
+import Domain.Caps (class CommitChanges, class CreateDirectory, class GetFileContent, class GetFileNames, class GetFileType, class InitGitRepo, class Log, class SaveFileContent, class StageFiles, commitChanges, createDirectory, getFileContent, getFileNames, getFileType, initGitRepo, log, saveFileContent, stageFiles)
 
 handleEvent ::
   forall f m.
   Parallel f m =>
+  CommitChanges m =>
   CreateDirectory m =>
   GetFileContent m =>
   GetFileNames m =>
@@ -52,13 +53,14 @@ handleEvent state event = case event of
 
 handleCmdExecRequested ::
   forall f m.
-  Parallel f m =>
+  CommitChanges m =>
   CreateDirectory m =>
   GetFileContent m =>
   GetFileNames m =>
   GetFileType m =>
   InitGitRepo m =>
   Log m =>
+  Parallel f m =>
   SaveFileContent m =>
   StageFiles m =>
   State ->
@@ -75,6 +77,11 @@ handleCmdExecRequested state input = case decodeFromString input of
     pure case res of
       Left errMsg -> Left $ "could not stage files because of " <> errMsg
       Right _ -> Right gitAddCmd
+  Right gitCommitCmd@(Git (GitCommit repoDirPath msg)) -> do
+    res <- commitChanges repoDirPath msg
+    pure case res of
+      Left errMsg -> Left $ "could not commit changes because of " <> errMsg
+      Right _ -> Right gitCommitCmd
   Right gitInitCmd@(Git (GitInit path)) -> do
     res <- initGitRepo path
     pure case res of

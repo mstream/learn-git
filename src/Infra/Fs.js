@@ -189,6 +189,20 @@ exports.mkGitAddPromise = (repoDirPath) => (pathSpec) => () =>
     fs,
   }));
 
+exports.mkGitCommitPromise = (repoDirPath) => (msg) => () =>
+  fsPromise
+  .then(({
+    fs
+  }) => git.commit({
+    author: {
+      name: "DUMMY",
+      email: "DUMMY@DUMMY.DUMMY",
+    },
+    dir: repoDirPath,
+    fs,
+    message: msg,
+  }));
+
 exports.mkGitInitPromise = (repoDirPath) => () =>
   fsPromise
   .then(({

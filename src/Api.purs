@@ -3,17 +3,19 @@ module Api (AppM, Env, ParAppM, runAppM) where
 import Prelude
 import Control.Monad.Reader (class MonadAsk, ReaderT, ask, asks, runReaderT)
 import Control.Parallel (class Parallel, parallel, sequential)
-import Core.Fs (FileContent, FileName, FileType, Path, PathSpec)
+import Core.Fs (FileContent, FileName, FileType, Path)
+import Core.Git (CommitMessage, PathSpec)
 import Core.Logger (LogEntry)
 import Data.Either.Nested (type (\/))
-import Domain.Caps (class CreateDirectory, class GetFileContent, class GetFileNames, class GetFileType, class InitGitRepo, class Log, class SaveFileContent, class StageFiles)
+import Domain.Caps (class CommitChanges, class CreateDirectory, class GetFileContent, class GetFileNames, class GetFileType, class InitGitRepo, class Log, class SaveFileContent, class StageFiles)
 import Effect.Aff (Aff, ParAff)
 import Effect.Aff.Class (class MonadAff, liftAff)
 import Effect.Class (class MonadEffect)
 import Type.Prelude (class TypeEquals, from)
 
 type Env
-  = { createDirectory :: Path -> Aff (String \/ Unit)
+  = { commitChanges :: Path -> CommitMessage -> Aff (String \/ Unit)
+    , createDirectory :: Path -> Aff (String \/ Unit)
     , getFileContent :: Path -> Aff (String \/ FileContent)
     , getFileNames :: Path -> Aff (String \/ Array FileName)
     , getFileType :: Path -> Aff (String \/ FileType)
@@ -58,6 +60,12 @@ derive newtype instance applicativeParAppM :: Applicative ParAppM
 instance parallelAppM :: Parallel ParAppM AppM where
   parallel (AppM readerT) = ParAppM (parallel readerT)
   sequential (ParAppM readerT) = AppM (sequential readerT)
+
+instance commitChangesAppM :: CommitChanges AppM where
+  commitChanges :: Path -> CommitMessage -> AppM (String \/ Unit)
+  commitChanges repoDirPath msg = do
+    env <- ask
+    liftAff $ env.commitChanges repoDirPath msg
 
 instance createDirectoryAppM :: CreateDirectory AppM where
   createDirectory :: Path -> AppM (String \/ Unit)

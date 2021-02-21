@@ -1,6 +1,7 @@
 module Infra.Fs
   ( exists
   , gitAdd
+  , gitCommit
   , gitInit
   , isBinary
   , isDir
@@ -25,6 +26,8 @@ foreign import mkExistsPromise :: String -> Effect (Promise Boolean)
 
 foreign import mkGitAddPromise :: String -> String -> Effect (Promise Unit)
 
+foreign import mkGitCommitPromise :: String -> String -> Effect (Promise Unit)
+
 foreign import mkGitInitPromise :: String -> Effect (Promise Unit)
 
 foreign import mkReadFilePromise :: String -> Effect (Promise ArrayBuffer)
@@ -42,6 +45,9 @@ exists = toAffE <<< mkExistsPromise
 
 gitAdd :: String -> String -> Aff Unit
 gitAdd repoDirPath pathSpec = toAffE $ mkGitAddPromise repoDirPath pathSpec
+
+gitCommit :: String -> String -> Aff Unit
+gitCommit repoDirPath pathSpec = toAffE $ mkGitCommitPromise repoDirPath pathSpec
 
 gitInit :: String -> Aff Unit
 gitInit = toAffE <<< mkGitInitPromise

@@ -23,6 +23,7 @@ main = do
           it "codes file content" $ recodeFileContent "content"
           it "codes edit command" $ recodeCmd "edit /abc \"content\""
           it "codes git add command" $ recodeCmd "git add /abc def/ghi"
+          it "codes git commit command" $ recodeCmd "git commit /abc \"some message\""
           it "codes git init command" $ recodeCmd "git init /abc"
           it "codes mkdir command" $ recodeCmd "mkdir /abc"
 

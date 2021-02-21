@@ -2,7 +2,8 @@ module ProdApi (runApi) where
 
 import Prelude
 import Api (AppM, runAppM)
-import Core.Fs (FileContent, FileName, FileType(..), Path, PathSpec, binaryFileContent)
+import Core.Fs (FileContent, FileName, FileType(..), Path, binaryFileContent)
+import Core.Git (CommitMessage, PathSpec)
 import Core.Logger (LogEntry, LogLevel(..), logLevel)
 import Core.StringCodec (decodeFromString, encodeToString)
 import Data.Either (Either(..))
@@ -12,14 +13,15 @@ import Effect (Effect)
 import Effect.Aff (Aff, attempt, message)
 import Effect.Class (liftEffect)
 import Effect.Console (error, info, warn)
-import Infra.Fs (gitAdd, gitInit, isBinary, isDir, mkDir, readDir, readFile, writeFile)
+import Infra.Fs (gitAdd, gitCommit, gitInit, isBinary, isDir, mkDir, readDir, readFile, writeFile)
 import Node.Buffer.Immutable (ImmutableBuffer, fromArrayBuffer, toArrayBuffer, toString)
 import Node.Encoding (Encoding(..))
 
 runApi :: AppM ~> Aff
 runApi =
   runAppM
-    { createDirectory: createDirectory
+    { commitChanges: commitChanges
+    , createDirectory: createDirectory
     , getFileContent: getFileContent
     , getFileNames: getFileNames
     , getFileType: getFileType
@@ -28,6 +30,13 @@ runApi =
     , saveFileContent: saveFileContent
     , stageFiles: stageFiles
     }
+
+commitChanges :: Path -> CommitMessage -> Aff (String \/ Unit)
+commitChanges repoDirPath msg = do
+  result <- attempt $ gitCommit (encodeToString repoDirPath) (encodeToString msg)
+  pure case result of
+    Left error -> Left $ message error
+    Right _ -> pure unit
 
 createDirectory :: Path -> Aff (String \/ Unit)
 createDirectory path = do

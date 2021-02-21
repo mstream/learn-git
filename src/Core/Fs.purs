@@ -4,13 +4,11 @@ module Core.Fs
   , FileName
   , FileType(..)
   , Path
-  , PathSpec
   , binaryFileContent
   , isBinary
   , textualFileContentParser
   , fromFileName
   , pathParser
-  , pathSpecParser
   ) where
 
 import Prelude
@@ -28,7 +26,7 @@ import Data.String.NonEmpty (NonEmptyString, toString)
 import Data.String.NonEmpty.CodeUnits (fromNonEmptyCharArray)
 import Motsunabe (Doc(..), pretty)
 import Text.Parsing.StringParser (Parser)
-import Text.Parsing.StringParser.CodePoints (alphaNum, anyChar, char)
+import Text.Parsing.StringParser.CodePoints (alphaNum, char)
 import Text.Parsing.StringParser.CodeUnits (noneOf)
 import Text.Parsing.StringParser.Combinators (choice, many, many1, sepBy)
 
@@ -96,15 +94,6 @@ instance stringCodecPath :: StringCodec Path where
     in
       sepStr <> (joinWith sepStr $ encodeToString <$> segments)
 
-newtype PathSpec
-  = PathSpec NonEmptyString
-
-instance stringCodecPathSpec :: StringCodec PathSpec where
-  decodeFromString :: String -> String \/ PathSpec
-  decodeFromString = decodeUsingParser pathSpecParser
-  encodeToString :: PathSpec -> String
-  encodeToString (PathSpec s) = toString s
-
 newtype FileName
   = FileName NonEmptyString
 
@@ -147,12 +136,6 @@ pathParser = segmentsParser <#> (fromFoldable >>> Path)
   where
   segmentsParser :: Parser (List FileName)
   segmentsParser = fileNameSeparatorParser *> sepBy fileNameParser fileNameSeparatorParser
-
-pathSpecParser :: Parser PathSpec
-pathSpecParser = charsParser <#> (fromFoldable1 >>> fromNonEmptyCharArray >>> PathSpec)
-  where
-  charsParser :: Parser (NonEmptyList Char)
-  charsParser = many1 anyChar
 
 fileNameSeparatorParser :: Parser FileNameSeparator
 fileNameSeparatorParser = char '/' <#> FileNameSeparator
