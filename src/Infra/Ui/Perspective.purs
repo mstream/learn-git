@@ -22,11 +22,11 @@ treeView level entries = E.ul [ E.className "pl-6" ] $ toUnfoldable entries <#> 
       nameEl :: E.Element a
       nameEl = E.text $ encodeToString name
     in
-      E.li [ E.className $ groupName level <> " flex flex-row" ]
+      E.li [ E.className $ groupName level <> " flex flex-col" ]
         $ case file of
             RegularFileContaining content ->
               [ E.div [ E.className $ groupName level <> "-hover:underline" ] [ I.document, nameEl ]
-              , contentView content
+              , E.div [ E.className "relative" ] [ contentView content ]
               ]
             DirectoryOf childEntries ->
               [ E.div' [ I.folder, nameEl ]
@@ -36,9 +36,9 @@ treeView level entries = E.ul [ E.className "pl-6" ] $ toUnfoldable entries <#> 
   contentView :: FileContent -> E.Element a
   contentView content =
     E.div
-      [ E.className $ groupName level <> "-hover:opacity-100 flex flex-col opacity-0 border border-double border-black p-4" ]
-      [ E.text "File content preview"
-      , E.div [ E.className "shadow-inner" ] [ if isBinary content then E.text "binary" else E.pre' [ E.text $ encodeToString content ] ]
+      [ E.className $ groupName level <> "-hover:opacity-100 absolute flex flex-col opacity-0 border-4 border-double border-black bg-white top-3 left-12 p-4" ]
+      [ E.div [ E.className "font-medium" ] [ E.text "File content preview" ]
+      , E.div [ E.className "p-4 shadow-inner" ] [ if isBinary content then E.text "binary" else E.pre' [ E.text $ encodeToString content ] ]
       ]
 
 groupName :: Int -> String
