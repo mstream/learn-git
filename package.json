@@ -17,14 +17,14 @@
     }
   },
   "devDependencies": {
-    "@parcel/optimizer-cssnano": "2.0.0-nightly.598",
-    "@parcel/optimizer-htmlnano": "2.0.0-nightly.598",
-    "@parcel/packager-css": "2.0.0-nightly.598",
-    "@parcel/packager-html": "2.0.0-nightly.598",
-    "@parcel/transformer-css": "2.0.0-nightly.598",
-    "@parcel/transformer-html": "2.0.0-nightly.598",
-    "@parcel/transformer-postcss": "2.0.0-nightly.598",
-    "@parcel/transformer-posthtml": "2.0.0-nightly.598",
+    "@parcel/optimizer-cssnano": "2.0.0-nightly.607",
+    "@parcel/optimizer-htmlnano": "2.0.0-nightly.607",
+    "@parcel/packager-css": "2.0.0-nightly.607",
+    "@parcel/packager-html": "2.0.0-nightly.607",
+    "@parcel/transformer-css": "2.0.0-nightly.607",
+    "@parcel/transformer-html": "2.0.0-nightly.607",
+    "@parcel/transformer-postcss": "2.0.0-nightly.607",
+    "@parcel/transformer-posthtml": "2.0.0-nightly.607",
     "@tailwindcss/aspect-ratio": "0.2.0",
     "@tailwindcss/forms": "0.2.1",
     "@tailwindcss/line-clamp": "0.2.0",
@@ -32,13 +32,13 @@
     "autoprefixer": "10.2.4",
     "browserfs": "1.4.3",
     "isomorphic-git": "1.8.1",
-    "parcel": "2.0.0-nightly.596",
+    "parcel": "2.0.0-nightly.605",
     "postcss": "8.2.6",
     "purescript": "0.13.8",
     "react": "16.14.0",
     "react-dom": "16.14.0",
     "spago": "0.19.0",
-    "tailwindcss": "2.0.2",
+    "tailwindcss": "2.0.3",
     "tailwindcss-named-groups": "0.0.5"
   }
 }
